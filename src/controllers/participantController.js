@@ -3,7 +3,7 @@ const supabase = require('../config/supabase');
 const participantController = {
   async getParticipants(req, res) {
     try {
-      console.log("Sending get participants request...");
+      console.log("Fetching participants information");
       const { data, error} = await supabase
         .from('participants')
         .select(`
@@ -71,6 +71,7 @@ const participantController = {
         const { first_name, last_name, date_of_birth } = participant_general_info;
         if (!first_name || !last_name || !date_of_birth) {
           console.log("participant_general_info (first_name, last_name, date_of_birth) is missing");
+          //first_name, last_name, date_of_birth are required fields so upserting on general_info table would not work without them
           return res.status(400).json({ error: 'Missing required fields in participant_general_info (first_name, last_name, date_of_birth)', 'updated_tables': [], 'participantid': participantId });
         }
       }
@@ -83,15 +84,17 @@ const participantController = {
       if (checkError) {
         throw checkError;
       }
+      
       if (!existingData){
+      //participant with such id does not exist in participants table
         if (!participant_general_info){
           console.log("participant_general_info (first_name, last_name, date_of_birth) is missing");
           return res.status(400).json({ error: 'To add new participant, participant_general_info (first_name, last_name, date_of_birth) are required', 'updated_tables': [], 'participantid': participantId });
         }
-        console.log("Adding participant to participant table", participantId);
+        console.log("Adding participant to participants table", participantId);
         const { data: newParticipant, error: insertError} = await supabase
           .from('participants')
-          .insert({'participant_updated_at': new Date().toISOString()})
+          .insert({'id': participantId})
           .select("id");
         if (insertError){
           throw insertError;
@@ -99,15 +102,16 @@ const participantController = {
         participantId = newParticipant[0]['id'];
       }
       else {
+        //participant with such id exists in participants table so we are using its id
         participantId = existingData['id'];
       }
-      let updatedData = {'id': participantId};
+      let updatedData = {'id': participantId}; //keeps track of all the participant's data in updates tables
       for (const [tablename, tabledata] of Object.entries(req.body)) {
         if (tabledata){
           console.log(`Updating the participant data in ${tablename} for ${participantId}`);
           const { data, error} = await supabase
             .from(tablename)
-            .upsert({ ...tabledata, id: participantId })
+            .upsert({ ...tabledata, id: participantId }) //inserts a row if such id is not found in the table and updates it otherwise
             .select("*");
           if (error){
             throw error;
@@ -115,11 +119,11 @@ const participantController = {
           if (!data || data.length === 0){
             throw new Error (`Failed to update ${tablename}`);
           }
-          updatedTables.push(tablename);
+          updatedTables.push(tablename); //keeping track of what tables were updated
           updatedData = {...updatedData, [tablename]: data};
         }
       }
-      console.log ('Updating last_updated value for participant:', participantId);
+      console.log ('Updating participant_updated_at value for participant:', participantId);
           const { data: updatedParticipant, error: updatedParticipantError} = await supabase
             .from('participants')
             .update({'participant_updated_at': new Date().toISOString()})
