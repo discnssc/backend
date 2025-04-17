@@ -291,5 +291,42 @@ const participantController = {
       res.status(500).json({ error: 'Internal server error' });
     }
   },
+  async deleteParticipantData(req, res) {
+    try {
+      if (!req.body || typeof req.body !== 'object') {
+        return res.status(400).json({ error: 'Invalid request body' });
+      }
+      const { table, participantid } = req.params;
+      if (!table || !participantid) {
+        return res.status(400).json({ error: 'ID and table are required' });
+      }
+      if (!validTables.has(table)) {
+        return res.status(400).json({ error: `Invalid table: ${table}` });
+      }
+      let keyFields = req.body && typeof req.body === 'object' ? req.body : {};
+      const isDeleteAll = Object.keys(keyFields).length === 0;
+
+      console.log('Deleting participant data:', participantid);
+      console.log(
+        `Deleting row(s) from ${table} with key fields ${JSON.stringify(keyFields)}`
+      );
+      keyFields = { ...keyFields, id: participantid };
+      const { error } = await supabase.from(table).delete().match(keyFields);
+      if (error) {
+        console.error(error.message);
+        return res.status(400).json({ error: error.message });
+      }
+      return res.status(200).json({
+        message: isDeleteAll
+          ? `All rows for participant deleted`
+          : `Row with specified keys deleted`,
+        table: table,
+        keys: keyFields,
+      });
+    } catch (error) {
+      console.error(error.message);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  },
 };
 module.exports = participantController;
