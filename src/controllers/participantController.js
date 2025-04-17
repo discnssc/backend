@@ -4,12 +4,11 @@ const ParticipantInfoFields = `
   id,
   participant_updated_at,
   participant_created_at,
-  type,
   participant_general_info(*),
   participant_demographics(*),
   participant_address_and_contact(*),
   participant_marital_status(*),
-  carepartners:participant_partnerships_participant_id_fkey (
+  carepartners:participant_care_id_fkey (
     primary,
     carepartner:carepartner_id (
       id,
@@ -20,7 +19,7 @@ const ParticipantInfoFields = `
       )
     )
   ),
-  participants_cared_for:participant_partnerships_carepartner_id_fkey (
+  participants_cared_for:participant_care_carepartner_id_fkey (
     primary,
     participant:id (
       id,
@@ -30,11 +29,11 @@ const ParticipantInfoFields = `
         status
       )
     )
-  )
+  ),
+  participant_services(*)
 `;
 const howParticipantInfoFields = `
   id,
-  type,
   participant_updated_at,
   participant_created_at,
   participant_general_info (*),
@@ -49,19 +48,21 @@ const validTables = new Set([
   'participant_demographics',
   'participant_address_and_contact',
   'participant_marital_status',
-  'participant_partnerships',
+  'participant_care',
   'participant_how_data_fields',
   'participant_how_falls',
   'participant_how_hospitalization',
   'participant_how_programs',
   'participant_how_toileting',
+  'participant_services',
 ]);
 const mainParticipantInfoFields = `
   id,
   participant_general_info (
     first_name,
     last_name,
-    status
+    status,
+    type
   )
 `;
 
@@ -72,10 +73,9 @@ const participantController = {
       const { data, error } = await supabase.from('participants').select(
         `
           ${mainParticipantInfoFields},
-          type,
           participant_created_at,
           participant_updated_at,
-          carepartners:participant_partnerships_participant_id_fkey (
+          carepartners:participant_care_id_fkey (
             primary,
             carepartner:carepartner_id (
               ${mainParticipantInfoFields}
@@ -104,7 +104,7 @@ const participantController = {
         .select(
           `
           ${mainParticipantInfoFields},
-          participants_cared_for:participant_partnerships_carepartner_id_fkey (
+          participants_cared_for:participant_care_carepartner_id_fkey (
             primary,
             participant:id (
               ${mainParticipantInfoFields}
@@ -112,7 +112,7 @@ const participantController = {
           )
           `
         )
-        .eq('type', 'Care Partner');
+        .eq('participant_general_info.type', 'Care Partner');
       if (error) {
         console.error(error.message);
         return res.status(400).json({ error: error.message });
