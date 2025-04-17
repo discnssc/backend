@@ -1,5 +1,44 @@
 const supabase = require('../config/supabase');
 
+const participantInfoList = `
+  id,
+  participant_updated_at,
+  participant_created_at,
+  participant_general_info(*),
+  participant_demographics(*),
+  participant_address_and_contact(*),
+  participant_marital_status(*),
+  carepartners:participant_partnerships_participant_id_fkey (
+    primary,
+    carepartner:carepartner_id (
+      id,
+      participant_general_info (
+        first_name,
+        last_name,
+        status
+      )
+    )
+  ),
+  participants_cared_for:participant_partnerships_carepartner_id_fkey (
+    primary,
+    participant:participant_id (
+      id,
+      participant_general_info (
+        first_name,
+        last_name,
+        status
+      )
+    )
+  )
+`;
+const validTables = new Set([
+  'participant_general_info',
+  'participant_demographics',
+  'participant_address_and_contact',
+  'participant_marital_status',
+  'participant_partnerships',
+]);
+
 const participantController = {
   async getParticipants(req, res) {
     try {
@@ -12,61 +51,109 @@ const participantController = {
             id,
             first_name,
             last_name,
-            care_giver,
             status
+          ),
+          carepartners:participant_partnerships_participant_id_fkey (
+            primary,
+            carepartner:carepartner_id (
+              id,
+              participant_general_info (
+                first_name,
+                last_name
+              )
+            )
           )
         `);
 
       if (error) {
-        console.log(error.message);
+        console.error(error.message);
         return res.status(400).json({ error: error.message });
       }
       if (data) {
         return res.json(data);
       }
     } catch (error) {
-      console.log(error.message);
+      console.error(error.message);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  },
+  async getCarePartners(req, res) {
+    try {
+      console.log('Fetching care partners information');
+      const { data, error } = await supabase
+        .from('participants')
+        .select(
+          `
+          id,
+          participant_general_info (
+            first_name,
+            last_name,
+            status
+          ),
+          participants_cared_for:participant_partnerships_carepartner_id_fkey (
+            primary,
+            participant:participant_id (
+              id,
+              participant_general_info (
+                first_name,
+                last_name,
+                status
+              )
+            )
+          )
+          `
+        )
+        .eq('type', 'Care Partner');
+      if (error) {
+        console.error(error.message);
+        return res.status(400).json({ error: error.message });
+      }
+      if (data) {
+        return res.json(data);
+      }
+    } catch (error) {
+      console.error(error.message);
       res.status(500).json({ error: 'Internal server error' });
     }
   },
   async getParticipantInfo(req, res) {
     try {
       const { participantid } = req.params;
+      if (!participantid) {
+        return res.status(400).json({ error: 'Participant ID is required' });
+      }
       console.log('Fetching participant info:', participantid);
       const { data, error } = await supabase
         .from('participants')
-        .select(
-          `
-          id,
-          participant_updated_at,
-          participant_created_at,
-          participant_general_info(*),
-          participant_demographics(*),
-          participant_address_and_contact(*),
-          participant_marital_status(*)
-        `
-        )
+        .select(participantInfoList)
         .eq('id', participantid)
         .single();
 
       if (error) {
-        console.log(error.message);
+        console.error(error.message);
         return res.status(400).json({ error: error.message });
       }
       if (data) {
         return res.json(data);
       }
     } catch (error) {
-      console.log(error.message);
+      console.error(error.message);
       res.status(500).json({ error: 'Internal server error' });
     }
   },
   async updateParticipant(req, res) {
     let participantId = null; //initialized to null to avoid reference error in catch block
     let updatedTables = []; // initialized to empty array to avoid reference error in catch block
+    let updatedData = {}; //keeps track of all the participant's data in the tables that are updated
     try {
+      if (!req.body || typeof req.body !== 'object') {
+        return res.status(400).json({ error: 'Invalid request body' });
+      }
       const { participantid } = req.params;
       participantId = participantid;
+      if (!participantId) {
+        return res.status(400).json({ error: 'Participant ID is required' });
+      }
       console.log('Checking if participant exists:', participantId);
       const { data: existingData, error: checkError } = await supabase
         .from('participants')
@@ -92,8 +179,10 @@ const participantController = {
           );
         }
       }
-      let updatedData = { id: participantId }; //keeps track of all the participant's data in the tables that are updated
       for (const [tablename, tabledata] of Object.entries(req.body)) {
+        if (!validTables.has(tablename)) {
+          return res.status(400).json({ error: `Invalid table: ${tablename}` });
+        }
         if (tabledata) {
           console.log(
             `Updating the participant data in ${tablename} for ${participantId}`
@@ -135,9 +224,10 @@ const participantController = {
         participantid: participantId,
       });
     } catch (error) {
-      console.log(error.message);
+      console.error(error.message);
       res.status(500).json({
         error: 'Internal server error',
+        updated_data: updatedData,
         updated_tables: updatedTables,
         participantid: participantId,
       });
@@ -154,14 +244,14 @@ const participantController = {
         .maybeSingle();
 
       if (error) {
-        console.log(error.message);
+        console.error(error.message);
         return res.status(400).json({ error: error.message });
       }
       return res.status(200).json({
         message: `Participant ${participantid} successfully deleted from the database`,
       });
     } catch (error) {
-      console.log(error.message);
+      console.error(error.message);
       res.status(500).json({ error: 'Internal server error' });
     }
   },
