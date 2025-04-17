@@ -1,9 +1,10 @@
 const supabase = require('../config/supabase');
 
-const participantInfoList = `
+const ParticipantInfoFields = `
   id,
   participant_updated_at,
   participant_created_at,
+  type,
   participant_general_info(*),
   participant_demographics(*),
   participant_address_and_contact(*),
@@ -21,7 +22,7 @@ const participantInfoList = `
   ),
   participants_cared_for:participant_partnerships_carepartner_id_fkey (
     primary,
-    participant:participant_id (
+    participant:id (
       id,
       participant_general_info (
         first_name,
@@ -31,39 +32,57 @@ const participantInfoList = `
     )
   )
 `;
+const howParticipantInfoFields = `
+  id,
+  type,
+  participant_updated_at,
+  participant_created_at,
+  participant_general_info (*),
+  participant_how_data_fields(*),
+  participant_how_falls(*),
+  participant_how_hospitalization(*),
+  participant_how_programs(*),
+  participant_how_toileting(*)
+`;
 const validTables = new Set([
   'participant_general_info',
   'participant_demographics',
   'participant_address_and_contact',
   'participant_marital_status',
   'participant_partnerships',
+  'participant_how_data_fields',
+  'participant_how_falls',
+  'participant_how_hospitalization',
+  'participant_how_programs',
+  'participant_how_toileting',
 ]);
+const mainParticipantInfoFields = `
+  id,
+  participant_general_info (
+    first_name,
+    last_name,
+    status
+  )
+`;
 
 const participantController = {
   async getParticipants(req, res) {
     try {
       console.log('Fetching participants information');
-      const { data, error } = await supabase.from('participants').select(`
-          id,
+      const { data, error } = await supabase.from('participants').select(
+        `
+          ${mainParticipantInfoFields},
+          type,
           participant_created_at,
           participant_updated_at,
-          participant_general_info (
-            id,
-            first_name,
-            last_name,
-            status
-          ),
           carepartners:participant_partnerships_participant_id_fkey (
             primary,
             carepartner:carepartner_id (
-              id,
-              participant_general_info (
-                first_name,
-                last_name
-              )
+              ${mainParticipantInfoFields}
             )
           )
-        `);
+        `
+      );
 
       if (error) {
         console.error(error.message);
@@ -84,21 +103,11 @@ const participantController = {
         .from('participants')
         .select(
           `
-          id,
-          participant_general_info (
-            first_name,
-            last_name,
-            status
-          ),
+          ${mainParticipantInfoFields},
           participants_cared_for:participant_partnerships_carepartner_id_fkey (
             primary,
-            participant:participant_id (
-              id,
-              participant_general_info (
-                first_name,
-                last_name,
-                status
-              )
+            participant:id (
+              ${mainParticipantInfoFields}
             )
           )
           `
@@ -125,7 +134,32 @@ const participantController = {
       console.log('Fetching participant info:', participantid);
       const { data, error } = await supabase
         .from('participants')
-        .select(participantInfoList)
+        .select(ParticipantInfoFields)
+        .eq('id', participantid)
+        .single();
+
+      if (error) {
+        console.error(error.message);
+        return res.status(400).json({ error: error.message });
+      }
+      if (data) {
+        return res.json(data);
+      }
+    } catch (error) {
+      console.error(error.message);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  },
+  async getParticipantHOWInfo(req, res) {
+    try {
+      const { participantid } = req.params;
+      if (!participantid) {
+        return res.status(400).json({ error: 'Participant ID is required' });
+      }
+      console.log('Fetching participant info:', participantid);
+      const { data, error } = await supabase
+        .from('participants')
+        .select(howParticipantInfoFields)
         .eq('id', participantid)
         .single();
 
@@ -184,6 +218,7 @@ const participantController = {
           return res.status(400).json({ error: `Invalid table: ${tablename}` });
         }
         if (tabledata) {
+          if (Object.keys(tabledata).length === 0) continue;
           console.log(
             `Updating the participant data in ${tablename} for ${participantId}`
           );
@@ -249,6 +284,7 @@ const participantController = {
       }
       return res.status(200).json({
         message: `Participant ${participantid} successfully deleted from the database`,
+        participantid: participantid,
       });
     } catch (error) {
       console.error(error.message);
