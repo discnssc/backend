@@ -55,6 +55,7 @@ const validTables = new Set([
   'participant_how_programs',
   'participant_how_toileting',
   'participant_services',
+  'participant_schedule',
 ]);
 const mainParticipantInfoFields = `
   id,
@@ -320,6 +321,104 @@ const participantController = {
         table: table,
         keys: keyFields,
       });
+    } catch (error) {
+      console.error(error.message);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  },
+  async getParticipantSchedules(req, res) {
+    try {
+      const { participantid } = req.params;
+      if (!participantid) {
+        return res.status(400).json({ error: 'Participant ID is required' });
+      }
+      const { data, error } = await supabase
+        .from('participant_schedule')
+        .select('*')
+        .eq('id', participantid);
+      if (error) {
+        console.error(error.message);
+        return res.status(400).json({ error: error.message });
+      }
+      return res.json(data);
+    } catch (error) {
+      console.error(error.message);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  },
+  async getAllParticipantSchedules(req, res) {
+    try {
+      const { data, error } = await supabase
+        .from('participant_schedule')
+        .select('*');
+      if (error) {
+        console.error(error.message);
+        return res.status(400).json({ error: error.message });
+      }
+      return res.json(data);
+    } catch (error) {
+      console.error(error.message);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  },
+  async getParticipantSchedule(req, res) {
+    try {
+      const { participantid } = req.params;
+      if (!participantid) {
+        return res.status(400).json({ error: 'Participant ID is required' });
+      }
+      const { data, error } = await supabase
+        .from('participant_schedule')
+        .select('*')
+        .eq('id', participantid)
+        .single();
+      if (error) {
+        console.error(error.message);
+        return res.status(400).json({ error: error.message });
+      }
+      return res.json(data);
+    } catch (error) {
+      console.error(error.message);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  },
+  async upsertParticipantSchedule(req, res) {
+    try {
+      const { participantid } = req.params;
+      const { month, schedule, toileting } = req.body;
+      if (!participantid || !month || !schedule) {
+        return res.status(400).json({ error: 'Participant ID, month, and schedule are required' });
+      }
+      const { data, error } = await supabase
+        .from('participant_schedule')
+        .upsert({ id: participantid, month, schedule, toileting })
+        .select('*')
+        .single();
+      if (error) {
+        console.error(error.message);
+        return res.status(400).json({ error: error.message });
+      }
+      return res.json(data);
+    } catch (error) {
+      console.error(error.message);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  },
+  async deleteParticipantSchedule(req, res) {
+    try {
+      const { participantid, month } = req.params;
+      if (!participantid || !month) {
+        return res.status(400).json({ error: 'Participant ID and month are required' });
+      }
+      const { error } = await supabase
+        .from('participant_schedule')
+        .delete()
+        .match({ id: participantid, month });
+      if (error) {
+        console.error(error.message);
+        return res.status(400).json({ error: error.message });
+      }
+      return res.status(200).json({ message: 'Schedule deleted', participantid, month });
     } catch (error) {
       console.error(error.message);
       res.status(500).json({ error: 'Internal server error' });
