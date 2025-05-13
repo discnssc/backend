@@ -335,7 +335,7 @@ const participantController = {
       const { data, error } = await supabase
         .from('participant_schedule')
         .select('*')
-        .eq('id', participantid);
+        .eq('participant_id', participantid);
       if (error) {
         console.error(error.message);
         return res.status(400).json({ error: error.message });
@@ -364,13 +364,16 @@ const participantController = {
   async getParticipantSchedule(req, res) {
     try {
       const { participantid } = req.params;
-      if (!participantid) {
-        return res.status(400).json({ error: 'Participant ID is required' });
+      const { month, year } = req.query;
+      if (!participantid || !month || !year) {
+        return res.status(400).json({ error: 'Participant ID, month, and year are required' });
       }
       const { data, error } = await supabase
         .from('participant_schedule')
         .select('*')
-        .eq('id', participantid)
+        .eq('participant_id', participantid)
+        .eq('month', month)
+        .eq('year', year)
         .single();
       if (error) {
         console.error(error.message);
@@ -385,13 +388,13 @@ const participantController = {
   async upsertParticipantSchedule(req, res) {
     try {
       const { participantid } = req.params;
-      const { month, schedule, toileting } = req.body;
-      if (!participantid || !month || !schedule) {
-        return res.status(400).json({ error: 'Participant ID, month, and schedule are required' });
+      const { month, year, schedule, toileting } = req.body;
+      if (!participantid || !month || !year || !schedule) {
+        return res.status(400).json({ error: 'Participant ID, month, year, and schedule are required' });
       }
       const { data, error } = await supabase
         .from('participant_schedule')
-        .upsert({ id: participantid, month, schedule, toileting })
+        .upsert({ participant_id: participantid, month, year, schedule, toileting }, { onConflict: ['participant_id', 'month', 'year'] })
         .select('*')
         .single();
       if (error) {
@@ -406,19 +409,112 @@ const participantController = {
   },
   async deleteParticipantSchedule(req, res) {
     try {
-      const { participantid, month } = req.params;
-      if (!participantid || !month) {
-        return res.status(400).json({ error: 'Participant ID and month are required' });
+      const { participantid, month, year } = req.params;
+      if (!participantid || !month || !year) {
+        return res.status(400).json({ error: 'Participant ID, month, and year are required' });
       }
       const { error } = await supabase
         .from('participant_schedule')
         .delete()
-        .match({ id: participantid, month });
+        .match({ participant_id: participantid, month, year });
       if (error) {
         console.error(error.message);
         return res.status(400).json({ error: error.message });
       }
-      return res.status(200).json({ message: 'Schedule deleted', participantid, month });
+      return res.status(200).json({ message: 'Schedule deleted', participantid, month, year });
+    } catch (error) {
+      console.error(error.message);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  },
+  /**
+   * Get all attendance records for all participants.
+   * GET /participants/attendance
+   */
+  async getAllParticipantAttendance(req, res) {
+    try {
+      const { data, error } = await supabase
+        .from('participant_attendance')
+        .select('*');
+      if (error) {
+        console.error('Supabase error:', error);
+        return res.status(400).json({ error: error.message });
+      }
+      return res.json(data);
+    } catch (error) {
+      console.error('Catch error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  },
+  /**
+   * Get all attendance records for a specific participant.
+   * GET /participants/attendance/:participantid
+   */
+  async getParticipantAttendance(req, res) {
+    try {
+      const { participantid } = req.params;
+      if (!participantid) {
+        return res.status(400).json({ error: 'Participant ID is required' });
+      }
+      const { data, error } = await supabase
+        .from('participant_attendance')
+        .select('*')
+        .eq('participant_id', participantid);
+      if (error) {
+        console.error(error.message);
+        return res.status(400).json({ error: error.message });
+      }
+      return res.json(data);
+    } catch (error) {
+      console.error(error.message);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  },
+  /**
+   * Upsert (insert or update) an attendance record.
+   * POST /participants/attendance
+   * Body: { id?, participant_id, date, time, in, out, code }
+   */
+  async upsertParticipantAttendance(req, res) {
+    try {
+      const { id, participant_id, date, time, in: inTime, out, code } = req.body;
+      if (!participant_id || !date || !time) {
+        return res.status(400).json({ error: 'participant_id, date, and time are required' });
+      }
+      const { data, error } = await supabase
+        .from('participant_attendance')
+        .upsert({ id, participant_id, date, time, in: inTime, out, code }, { onConflict: id ? ['id'] : undefined })
+        .select('*')
+        .single();
+      if (error) {
+        console.error(error.message);
+        return res.status(400).json({ error: error.message });
+      }
+      return res.json(data);
+    } catch (error) {
+      console.error(error.message);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  },
+  /**
+   * Delete an attendance record by id.
+   * DELETE /participants/attendance/:id
+   */
+  async deleteParticipantAttendance(req, res) {
+    try {
+      const { id } = req.params;
+      if (!id) {
+        return res.status(400).json({ error: 'Attendance id is required' });
+      }
+      const { error } = await supabase
+        .from('participant_attendance')
+        .delete()
+        .eq('id', id);
+      if (error) {
+        console.error(error.message);
+        return res.status(400).json({ error: error.message });
+      }
+      return res.status(200).json({ message: 'Attendance deleted', id });
     } catch (error) {
       console.error(error.message);
       res.status(500).json({ error: 'Internal server error' });
