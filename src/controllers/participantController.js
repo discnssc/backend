@@ -55,7 +55,6 @@ const validTables = new Set([
   'participant_how_programs',
   'participant_how_toileting',
   'participant_services',
-  'participant_schedule',
 ]);
 const mainParticipantInfoFields = `
   id,
