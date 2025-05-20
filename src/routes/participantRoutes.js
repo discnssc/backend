@@ -12,6 +12,5 @@ router.delete(
   '/:table/:participantid',
   participantController.deleteParticipantData
 );
-router.get('/:participantid', participantController.getParticipantInfo);
 
 module.exports = router;
