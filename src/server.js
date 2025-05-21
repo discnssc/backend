@@ -5,6 +5,7 @@ require('dotenv').config();
 
 const authRoutes = require('./routes/authRoutes');
 const participantRoutes = require('./routes/participantRoutes');
+const scheduleRoutes = require('./routes/scheduleRoutes');
 
 const app = express();
 
@@ -46,6 +47,7 @@ app.use((req, res, next) => {
 
 app.use('/auth', authRoutes);
 app.use('/participants', participantRoutes);
+app.use('/schedule', scheduleRoutes);
 
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok' });
