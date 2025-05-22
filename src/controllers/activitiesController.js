@@ -85,7 +85,7 @@ const activitiesController = {
           },
         ])
         .select(
-          `id, "Date", participant_id, activity_schedule_id, declined, rating, notes`
+          `id, "date", participant_id, activity_schedule_id, declined, rating, notes`
         ) // Select inserted fields for confirmation
         .single();
 
@@ -122,17 +122,14 @@ const activitiesController = {
    *   },
    *   // ... more participant entries
    * ]
-   * This function will look up participant_id by name before inserting.
    */
   async recordAttendance(req, res) {
     try {
-      const { activityScheduleId } = req.params; // Get scheduled activity ID from URL
+      const { activityId } = req.params; // Get scheduled activity ID from URL
       const participantAttendance = req.body; // Get array of attendance data (with names)
 
-      if (!activityScheduleId) {
-        return res
-          .status(400)
-          .json({ error: 'Missing activityScheduleId in URL' });
+      if (!activityId) {
+        return res.status(400).json({ error: 'Missing activityId in URL' });
       }
 
       if (
@@ -163,7 +160,7 @@ const activitiesController = {
           }
 
           logsToInsert.push({
-            activity_schedule_id: activityScheduleId, // Link to the scheduled activity
+            activity_schedule_id: activityId, // Link to the scheduled activity
             participant_id: participantId,
             declined: declined || false,
             rating: rating || null,
@@ -185,8 +182,10 @@ const activitiesController = {
       }
       const { data, error } = await supabase
         .from('activity_log')
-        .insert(logsToInsert)
-        .select(`*`);
+        .upsert(logsToInsert, {
+          onConflict: ['activity_schedule_id', 'participant_id'], // Composite unique key now exists
+          returning: 'representation',
+        });
 
       if (error) {
         console.error('Supabase bulk insertion error:', error);
@@ -210,6 +209,56 @@ const activitiesController = {
       });
     } catch (err) {
       console.error('recordAttendance endpoint error:', err);
+      return res.status(500).json({ error: 'Internal server error' });
+    }
+  },
+
+  async getActivityWithAttendance(req, res) {
+    try {
+      const { activityId } = req.params;
+      if (!activityId) {
+        return res.status(400).json({ error: 'Missing activityId' });
+      }
+      const { data, error } = await supabase
+        .from('activity_schedule')
+        .select(
+          `
+          id,
+          name,
+          date,
+          time_start,
+          lead_staff,
+          staff,
+          volunteers,
+          location,
+          notes,
+          activity_logs:activity_log (
+            id,
+            participant:participant_id (
+              id,
+              participant_general_info (
+                first_name,
+                last_name
+              )
+            ),
+            declined,
+            rating,
+            notes,
+            date
+          )
+        `
+        )
+        .eq('id', activityId)
+        .single();
+
+      if (error) {
+        console.error('Supabase getActivityWithAttendance error:', error);
+        return res.status(400).json({ error: error.message });
+      }
+
+      return res.status(200).json(data);
+    } catch (err) {
+      console.error('getActivityWithAttendance error:', err);
       return res.status(500).json({ error: 'Internal server error' });
     }
   },

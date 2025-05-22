@@ -9,6 +9,8 @@ router.get(
   '/:participantId/activity-logs',
   activitiesController.getActivityLogs
 );
+/* GET /api/activities/:activityScheduleId */
+router.get('/:activityId', activitiesController.getActivityWithAttendance);
 
 /* POST /api/participants/:participantId/activity-logs */
 router.post(
@@ -16,10 +18,7 @@ router.post(
   activitiesController.createActivityLog
 );
 
-/* POST /activities/:activityScheduleId/attendance */
-router.post(
-  '/:activityScheduleId/attendance',
-  activitiesController.recordAttendance
-);
+/* PUT /activities/:activityScheduleId/attendance */
+router.put('/:activityId/attendance', activitiesController.recordAttendance);
 
 module.exports = router; // THIS is what server.js will import
