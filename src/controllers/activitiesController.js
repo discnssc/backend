@@ -278,6 +278,128 @@ const activitiesController = {
       return res.status(500).json({ error: 'Internal server error' });
     }
   },
+
+  async addActivity(req, res) {
+    try {
+      const {
+        name,
+        date,
+        time_start,
+        time_end,
+        lead_staff,
+        staff,
+        volunteers,
+        location,
+        notes,
+      } = req.body;
+
+      if (!name || !date || !time_start || !time_end) {
+        return res.status(400).json({ error: 'Missing required fields' });
+      }
+
+      const { data, error } = await supabase
+        .from('activity_schedule')
+        .insert([
+          {
+            name,
+            date,
+            time_start,
+            time_end,
+            lead_staff,
+            staff,
+            volunteers,
+            location,
+            notes,
+          },
+        ])
+        .select('*')
+        .single();
+
+      if (error) {
+        console.error('Supabase createActivity error:', error);
+        return res.status(400).json({ error: error.message });
+      }
+
+      return res.status(201).json(data);
+    } catch (err) {
+      console.error('createActivity error:', err);
+      return res.status(500).json({ error: 'Internal server error' });
+    }
+  },
+  async updateActivity(req, res) {
+    try {
+      const { activityId } = req.params;
+      const {
+        name,
+        date,
+        time_start,
+        time_end,
+        lead_staff,
+        staff,
+        volunteers,
+        location,
+        notes,
+      } = req.body;
+
+      if (!activityId) {
+        return res.status(400).json({ error: 'Missing activityId' });
+      }
+
+      const { data, error } = await supabase
+        .from('activity_schedule')
+        .update({
+          name,
+          date,
+          time_start,
+          time_end,
+          lead_staff,
+          staff,
+          volunteers,
+          location,
+          notes,
+        })
+        .eq('id', activityId)
+        .select('*')
+        .single();
+
+      if (error) {
+        console.error('Supabase updateActivity error:', error);
+        return res.status(400).json({ error: error.message });
+      }
+
+      return res.status(200).json(data);
+    } catch (err) {
+      console.error('updateActivity error:', err);
+      return res.status(500).json({ error: 'Internal server error' });
+    }
+  },
+  async deleteActivity(req, res) {
+    try {
+      const { activityId } = req.params;
+      if (!activityId) {
+        return res.status(400).json({ error: 'Missing activityId' });
+      }
+
+      const { error } = await supabase
+        .from('activity_schedule')
+        .delete()
+        .eq('id', activityId)
+        .single();
+
+      if (error) {
+        console.error('Supabase deleteActivity error:', error);
+        return res.status(400).json({ error: error.message });
+      }
+
+      return res.status(200).json({
+        activityId: activityId,
+        message: 'Activity deleted successfully',
+      });
+    } catch (err) {
+      console.error('deleteActivity error:', err);
+      return res.status(500).json({ error: 'Internal server error' });
+    }
+  },
 };
 
 module.exports = activitiesController;

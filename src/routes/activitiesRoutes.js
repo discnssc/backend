@@ -22,4 +22,11 @@ router.post(
 /* PUT /activities/:activityId/attendance */
 router.put('/:activityId/attendance', activitiesController.recordAttendance);
 
+/* POST /activities */
+router.post('/', activitiesController.addActivity);
+/* PUT /activities/:activityId */
+router.put('/:activityId', activitiesController.updateActivity);
+/* DELETE /activities/:activityId */
+router.delete('/:activityId', activitiesController.deleteActivity);
+
 module.exports = router;
