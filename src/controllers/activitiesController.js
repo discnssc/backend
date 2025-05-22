@@ -7,7 +7,7 @@ const activitiesController = {
    * Optional query params:
    *   ?start=2024-12-01&end=2025-03-31 → logs between dates inclusive
    */
-  async getActivityLogs(req, res) {
+  async getActivityLogsForParticipant(req, res) {
     try {
       const { participantId } = req.params;
       if (!participantId) {
@@ -25,7 +25,7 @@ const activitiesController = {
           declined,
           rating,
           notes,
-          schedule:activity_schedule_id ( name, date )
+          schedule:activity_schedule_id ( id, name, date )
         `
         )
         .eq('participant_id', participantId);
@@ -63,7 +63,6 @@ const activitiesController = {
       const { participantId } = req.params;
       const { activity_schedule_id, declined, rating, notes } = req.body;
 
-      // Validate required fields
       if (!participantId || !activity_schedule_id) {
         return res.status(400).json({
           error:
@@ -80,13 +79,13 @@ const activitiesController = {
             participant_id: participantId,
             activity_schedule_id,
             declined: declined || false, // Default to false if not provided
-            rating: rating || null, // Default to null if not provided
+            rating: rating ?? null, // Default to null if not provided
             notes: notes || null, // Default to null if not provided
           },
         ])
         .select(
           `id, "date", participant_id, activity_schedule_id, declined, rating, notes`
-        ) // Select inserted fields for confirmation
+        )
         .single();
 
       if (error) {
@@ -110,7 +109,7 @@ const activitiesController = {
   },
 
   /**
-   * POST /activities/:activityScheduleId/attendance
+   * PUT /activities/:activityScheduleId/attendance
    * Records attendance and details for multiple participants for a specific scheduled activity.
    * Request body should be a JSON array of participant attendance objects:
    * [
@@ -126,7 +125,7 @@ const activitiesController = {
   async recordAttendance(req, res) {
     try {
       const { activityId } = req.params; // Get scheduled activity ID from URL
-      const participantAttendance = req.body; // Get array of attendance data (with names)
+      const participantAttendance = req.body;
 
       if (!activityId) {
         return res.status(400).json({ error: 'Missing activityId in URL' });
@@ -163,41 +162,34 @@ const activitiesController = {
             activity_schedule_id: activityId, // Link to the scheduled activity
             participant_id: participantId,
             declined: declined || false,
-            rating: rating || null,
+            rating: rating ?? null,
             notes: notes || null,
           });
         })
       ); // End Promise.all map
 
-      if (logsToInsert.length === 0) {
-        if (errors.length > 0) {
-          return res
-            .status(400)
-            .json({ error: 'No valid logs to insert.', details: errors });
-        }
+      if (logsToInsert.length === 0 || errors.length > 0) {
         return res.status(400).json({
           error:
-            'No valid participant attendance data provided or no matching participants found.',
+            'No valid participant attendance data provided' + errors.join(', '),
         });
       }
       const { data, error } = await supabase
         .from('activity_log')
         .upsert(logsToInsert, {
-          onConflict: ['activity_schedule_id', 'participant_id'], // Composite unique key now exists
-          returning: 'representation',
+          onConflict: ['activity_schedule_id', 'participant_id'], // Composite unique keys
         });
 
       if (error) {
-        console.error('Supabase bulk insertion error:', error);
+        console.error('Supabase recordAttendance error:', error);
         // Check for unique constraint violation (composite PK: activity_schedule_id, participant_id)
         if (error.code === '23505') {
           // Postgres unique_violation error code
-          // Can try to insert one by one here and return details about conflicts
           // But for simplicity, returning a general conflict error for the batch
           return res.status(409).json({
             error:
               'Conflict: Some participant attendance records for this activity already exist.',
-            details: error.message, // Include DB error message for debugging
+            details: error.message,
           });
         }
         return res.status(400).json({ error: error.message });
@@ -227,6 +219,7 @@ const activitiesController = {
           name,
           date,
           time_start,
+          time_end,
           lead_staff,
           staff,
           volunteers,
@@ -259,6 +252,29 @@ const activitiesController = {
       return res.status(200).json(data);
     } catch (err) {
       console.error('getActivityWithAttendance error:', err);
+      return res.status(500).json({ error: 'Internal server error' });
+    }
+  },
+  async getAllActivities(req, res) {
+    try {
+      const { start, end } = req.query;
+
+      let query = supabase
+        .from('activity_schedule')
+        .select(`*`)
+        .order('date', { ascending: true });
+
+      if (start) query = query.gte('date', start);
+      if (end) query = query.lte('date', end);
+
+      const { data, error } = await query;
+      if (error) {
+        console.error('Supabase getAllActivities error:', error);
+        return res.status(400).json({ error: error.message });
+      }
+      return res.status(200).json(data);
+    } catch (err) {
+      console.error('getAllActivities error:', err);
       return res.status(500).json({ error: 'Internal server error' });
     }
   },

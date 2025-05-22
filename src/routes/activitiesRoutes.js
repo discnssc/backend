@@ -1,16 +1,17 @@
 const express = require('express');
 const activitiesController = require('../controllers/activitiesController');
-//const authMiddleware = require('../middleware/authMiddleware'); // <‑‑ don't forget this
 
 const router = express.Router();
 
 /* GET /api/participants/:participantId/activity-logs */
 router.get(
   '/:participantId/activity-logs',
-  activitiesController.getActivityLogs
+  activitiesController.getActivityLogsForParticipant
 );
-/* GET /api/activities/:activityScheduleId */
+/* GET /api/activities/:activityId */
 router.get('/:activityId', activitiesController.getActivityWithAttendance);
+/* GET /api/activities */
+router.get('/', activitiesController.getAllActivities);
 
 /* POST /api/participants/:participantId/activity-logs */
 router.post(
@@ -18,7 +19,7 @@ router.post(
   activitiesController.createActivityLog
 );
 
-/* PUT /activities/:activityScheduleId/attendance */
+/* PUT /activities/:activityId/attendance */
 router.put('/:activityId/attendance', activitiesController.recordAttendance);
 
-module.exports = router; // THIS is what server.js will import
+module.exports = router;

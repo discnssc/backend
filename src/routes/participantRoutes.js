@@ -16,7 +16,7 @@ router.delete(
 
 router.get(
   '/:participantId/activity-logs',
-  activitiesController.getActivityLogs // maybe unecessary? but thought it was good to keep participant endpoints tgt
+  activitiesController.getActivityLogsForParticipant
 );
 
 module.exports = router;
