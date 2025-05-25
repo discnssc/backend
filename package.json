@@ -22,7 +22,9 @@
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
-    "express": "^4.21.2"
+    "express": "^4.21.2",
+    "luxon": "^3.6.1",
+    "postman": "^0.2.0"
   },
   "devDependencies": {
     "@eslint/js": "latest",
@@ -32,7 +34,7 @@
     "eslint-plugin-import": "latest",
     "eslint-plugin-no-relative-import-paths": "latest",
     "eslint-plugin-prettier": "latest",
-    "nodemon": "^3.1.9",
+    "nodemon": "^3.1.10",
     "prettier": "latest"
   }
 }
