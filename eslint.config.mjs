@@ -5,7 +5,6 @@ import pluginJs from '@eslint/js';
 import importPlugin from 'eslint-plugin-import';
 import noRelativeImportPaths from 'eslint-plugin-no-relative-import-paths';
 import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
-
 /** @type {import('eslint').Linter.Config[]} */
 export default [
   {
