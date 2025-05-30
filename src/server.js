@@ -5,6 +5,7 @@ require('dotenv').config();
 
 const authRoutes = require('./routes/authRoutes');
 const participantRoutes = require('./routes/participantRoutes');
+const activitiesRoutes = require('./routes/activitiesRoutes');
 const scheduleRoutes = require('./routes/scheduleRoutes');
 
 const app = express();
@@ -47,6 +48,7 @@ app.use((req, res, next) => {
 
 app.use('/auth', authRoutes);
 app.use('/participants', participantRoutes);
+app.use('/activities', activitiesRoutes);
 app.use('/schedule', scheduleRoutes);
 
 app.get('/health', (req, res) => {
@@ -77,8 +79,12 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`Frontend URL: ${process.env.FRONTEND_URL}`);
-});
+app.listen(
+  PORT,
+  process.env.NODE_ENV !== 'production' ? 'localhost' : '0.0.0.0',
+  () => {
+    console.log(`Server running on port ${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`Frontend URL: ${process.env.FRONTEND_URL}`);
+  }
+);
