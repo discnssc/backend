@@ -294,16 +294,24 @@ const participantController = {
   async deleteParticipantData(req, res) {
     try {
       const { table, participantid } = req.params;
+      console.log(req.query);
+      const { carepartner_id, entry_id } = req.query;
       if (!table || !participantid) {
         return res.status(400).json({ error: 'ID and table are required' });
       }
       if (!validTables.has(table)) {
         return res.status(400).json({ error: `Invalid table: ${table}` });
       }
-      let keyFields = req.body && typeof req.body === 'object' ? req.body : {};
+      let keyFields = {};
+      if (typeof carepartner_id !== 'undefined' && carepartner_id !== null) {
+        keyFields.carepartner_id = carepartner_id;
+      }
+      if (typeof entry_id !== 'undefined' && entry_id !== null) {
+        keyFields.entry_id = entry_id;
+      }
       const isDeleteAll = Object.keys(keyFields).length === 0;
 
-      console.log('Deleting participant data:', participantid);
+      console.log('Deleting some participant data:', participantid);
       console.log(
         `Deleting row(s) from ${table} with key fields ${JSON.stringify(keyFields)}`
       );
