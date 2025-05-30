@@ -159,7 +159,7 @@ const scheduleController = {
   /**
    * Upsert (insert or update) an attendance record.
    * POST /participants/attendance
-   * Body: { id?, participant_id, date, time, in, out, code }
+   * Body: { id?, participant_id, date, in, out, code }
    */
   async upsertParticipantAttendance(req, res) {
     try {
@@ -167,21 +167,21 @@ const scheduleController = {
         id,
         participant_id,
         date,
-        time,
         in: inTime,
         out,
         code,
+        session,
       } = req.body;
-      if (!participant_id || !date || !time) {
+      if (!participant_id || !date) {
         return res
           .status(400)
-          .json({ error: 'participant_id, date, and time are required' });
+          .json({ error: 'participant_id and date are required' });
       }
       const { data, error } = await supabase
         .from('participant_attendance')
         .upsert(
-          { id, participant_id, date, time, in: inTime, out, code },
-          { onConflict: id ? ['id'] : undefined }
+          { id, participant_id, date, in: inTime, out, code, session },
+          { onConflict: ['participant_id', 'date'] }
         )
         .select('*')
         .single();
