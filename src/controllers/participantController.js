@@ -15,7 +15,8 @@ const ParticipantInfoFields = `
       participant_general_info (
         first_name,
         last_name,
-        status
+        status,
+        how_id
       )
     )
   ),
@@ -26,11 +27,11 @@ const ParticipantInfoFields = `
       participant_general_info (
         first_name,
         last_name,
-        status
+        status,
+        how_id
       )
     )
-  ),
-  participant_services(*)
+  )
 `;
 const howParticipantInfoFields = `
   id,
@@ -62,7 +63,8 @@ const mainParticipantInfoFields = `
     first_name,
     last_name,
     status,
-    type
+    type,
+    how_id
   )
 `;
 
@@ -162,6 +164,30 @@ const participantController = {
         .select(howParticipantInfoFields)
         .eq('id', participantid)
         .single();
+
+      if (error) {
+        console.error(error.message);
+        return res.status(400).json({ error: error.message });
+      }
+      if (data) {
+        return res.json(data);
+      }
+    } catch (error) {
+      console.error(error.message);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  },
+  async getParticipantServices(req, res) {
+    try {
+      const { participantid } = req.params;
+      if (!participantid) {
+        return res.status(400).json({ error: 'Participant ID is required' });
+      }
+      console.log('Fetching participant services:', participantid);
+      const { data, error } = await supabase
+        .from('participant_services')
+        .select(`*`)
+        .eq('id', participantid);
 
       if (error) {
         console.error(error.message);
