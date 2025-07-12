@@ -7,6 +7,10 @@ router.get('/', participantController.getParticipants);
 router.get('/carepartners', participantController.getCarePartners);
 router.get('/:participantid', participantController.getParticipantInfo);
 router.get('/how/:participantid', participantController.getParticipantHOWInfo);
+router.get(
+  '/services/:participantid',
+  participantController.getParticipantServices
+);
 router.put('/:participantid', participantController.updateParticipant);
 router.delete('/:participantid', participantController.deleteParticipant);
 router.delete(
