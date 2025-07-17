@@ -1,3 +1,10 @@
 .DS_STORE
 .env
 node_modules/
+ACTIVITY_SCHEDULE_OUTLINE.md
+GOOGLE_CALENDAR_SETUP.md
+OAUTH_TROUBLESHOOTING.md
+google-auth-setup.js
+oauth-callback.js
+test-calendar.js
+
