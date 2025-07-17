@@ -1,12 +1,6 @@
 const supabase = require('../config/supabase');
 
 const activitiesController = {
-  /**
-   * GET /participants/:participantId/activity-logs
-   * Fetches activity logs for a specific participant.
-   * Optional query params:
-   *   ?start=2024-12-01&end=2025-03-31 → logs between dates inclusive
-   */
   async getActivityLogsForParticipant(req, res) {
     try {
       const { participantId } = req.params;
@@ -45,19 +39,6 @@ const activitiesController = {
     }
   },
 
-  /**
-   * POST /participants/:participantId/activity-logs
-   * Creates a new activity log for a single participant.
-   * Useful for manually adding a log entry for one person.
-   * Request body should contain:
-   * {
-   *   "activity_schedule_id": "uuid-of-schedule",
-   *   "declined": false, // optional
-   *   "rating": 5,       // optional
-   *   "notes": "..."     // optional
-   *   // "Date" is expected to be set by DB trigger based on activity_schedule.Date
-   * }
-   */
   async createActivityLog(req, res) {
     try {
       const { participantId } = req.params;
@@ -70,8 +51,7 @@ const activitiesController = {
         });
       }
 
-      // Insert the activity log in Supabase.
-      // The trigger will set the "Date" based on activity_schedule_id.
+      // put the activity log in Supabase
       const { data, error } = await supabase
         .from('activity_log')
         .insert([
@@ -108,20 +88,6 @@ const activitiesController = {
     }
   },
 
-  /**
-   * PUT /activities/:activityScheduleId/attendance
-   * Records attendance and details for multiple participants for a specific scheduled activity.
-   * Request body should be a JSON array of participant attendance objects:
-   * [
-   *   {
-   *     "participantId": UUID,  // Participant's ID
-   *     "declined": false, // boolean, optional
-   *     "rating": 5,       // number, optional
-   *     "notes": "..."     // text, optional
-   *   },
-   *   // ... more participant entries
-   * ]
-   */
   async recordAttendance(req, res) {
     try {
       const { activityId } = req.params; // Get scheduled activity ID from URL

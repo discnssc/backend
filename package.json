@@ -18,11 +18,13 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@googleapis/calendar": "^10.0.1",
     "@supabase/supabase-js": "^2.47.8",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "googleapis": "^150.0.1",
     "luxon": "^3.6.1",
     "postman": "^0.2.0"
   },
